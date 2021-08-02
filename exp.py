@@ -258,4 +258,7 @@ def main(argv):
     getInfo(target)
 
 if __name__ == "__main__":
-    main(sys.argv)
+    try:
+        main(sys.argv)
+    except:
+        print("Usage: python3 exp.py mail.lab.local")
