@@ -1,6 +1,4 @@
 administrator
 admin
 guest
-root
 test
-localhost
