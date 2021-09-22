@@ -229,4 +229,4 @@ if __name__ == "__main__":
     try:
         main(sys.argv)
     except IndexError:
-        print("Usage: python3 exp.py mail.ews.lab")
+        print("Usage: python3 26855.py 1.1.1.1")
