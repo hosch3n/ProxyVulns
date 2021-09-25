@@ -1,9 +1,10 @@
+import sys
+
 from base64 import b64decode, b64encode
 from itertools import cycle
-import sys
 from Crypto.Util.Padding import unpad
 
-from requests.packages import urllib3
+import urllib3
 import requests
 
 

