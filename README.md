@@ -32,6 +32,8 @@ Usage: python3 34473.py 1.1.1.1
 
 ![](img/34473.png)
 
+> Not working in some versions target(due to `/@gmail.com` path), I will fix it later
+
 `Wait For Update FileWrite Exp(31207.py)`
 
 ## Reference

