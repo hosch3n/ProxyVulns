@@ -1,11 +1,10 @@
 import sys
 
+import urllib3
+import requests
 from base64 import b64decode, b64encode
 from itertools import cycle
 from Crypto.Util.Padding import unpad
-
-import urllib3
-import requests
 
 
 urllib3.disable_warnings()

