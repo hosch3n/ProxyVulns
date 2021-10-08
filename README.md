@@ -38,6 +38,12 @@ Usage: python3 31207.py 1.1.1.1 [Local File Path] [UNC Absolute Path]
 
 > Not working in some versions target(due to `/@gmail.com` path), maybe fix it later
 
+### Others
+
+- `Cookie: securitytoken=foobar`
+
+- `/owa/calendar/foobar@exchange.local/foobar/owa14.aspx/.js`
+
 ## Reference
 
 [ProxyLogon Vulnerability Analysis(Chinese)](https://hosch3n.github.io/2021/08/22/ProxyLogon%E6%BC%8F%E6%B4%9E%E5%88%86%E6%9E%90/)
