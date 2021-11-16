@@ -1,5 +1,6 @@
-import sys
+#!/usr/bin/env python3
 
+import sys
 import urllib3
 import requests
 from base64 import b64decode, b64encode

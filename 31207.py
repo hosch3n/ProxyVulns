@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 
 xmodule = __import__("34473")
