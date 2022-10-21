@@ -17,7 +17,7 @@ https://ews.lab/owa/auth/frowny.aspx?app=people&et=ServerError&esrc=MasterPage&t
 ``` bash
 pip3 install pycryptodome
 
-Usage: python3 31196.py 1.1.1.1 'cdata=xxx; cadataTTL=yyy; ...'
+Usage: python3 31196.py 1.1.1.1 'cadata=xxx; cadataTTL=yyy; ...'
 ```
 
 ![](img/31196.png)

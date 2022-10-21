@@ -13,7 +13,7 @@ req = requests.session()
 
 proxies = {
     "http": "http://127.0.0.1:8080",
-    "https": "https://127.0.0.1:8080",
+    "https": "http://127.0.0.1:8080",
 }
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"

